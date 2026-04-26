@@ -1,0 +1,7 @@
+# Ignorar contraseñas y variables de entorno
+.env
+
+# Ignorar las carpetas del entorno virtual de Python (pesan mucho y no se suben)
+venv/
+env/
+__pycache__/
