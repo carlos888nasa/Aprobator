@@ -29,37 +29,42 @@ async def boton_pomodoro(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     if datos_boton == 'pomo_custom':
         await query.edit_message_text("✍️ Escribe en números cuántos minutos totales quieres estudiar (ejemplo: 150):")
         return ESPERANDO_TIEMPO
+        
     minutos_pedidos = int(datos_boton.split('_')[1])
     pomodoro_totales = minutos_pedidos // 30
     
-    mis_datos = {'totales': pomodoro_totales, 'completado': 0}
+    mis_datos = {'totales': pomodoro_totales, 'completados': 0}
+    
     await query.edit_message_text(f"🚀 ¡Modo Bestia! Programados {pomodoro_totales} bloques de estudio.\nEmpieza el primer ciclo de 25 min. ¡A por todas!")
+    
     context.job_queue.run_once(alarma_estudio, 25 * 60, chat_id=query.message.chat_id, data=mis_datos)
     return ConversationHandler.END
     
 async def alarma_estudio(context: ContextTypes.DEFAULT_TYPE) -> None:
     job = context.job
     datos = job.data
-    datos['completado'] += 1
+    datos['completados'] += 1
 
-    if datos ['completado'] % 4 == 0:
-        tiempo_descanso = 15*60
+    if datos['completados'] % 4 == 0:
+        tiempo_descanso = 15 * 60
         txt = f"🏆 ¡Ciclo {datos['completados']} terminado! Te toca descanso LARGO (15 min)."
     else:
-        tiempo_descanso = 5*60
+        tiempo_descanso = 5 * 60
         txt = f"✅ ¡Ciclo {datos['completados']} terminado! Te toca descanso CORTO (5 min)."
-    await context.bot.send_message(chat_id=context.job.chat_id, text = txt) 
+        
+    await context.bot.send_message(chat_id=job.chat_id, text=txt) 
     context.job_queue.run_once(alarma_descanso, tiempo_descanso, chat_id=job.chat_id, data=datos)
 
 async def alarma_descanso(context: ContextTypes.DEFAULT_TYPE) -> None:
     job = context.job
     datos = job.data
 
-    if datos['completado'] >= datos['totales']:
-        await context.bot.send_message(chat_id=context.job.chat_id, text=f"🎉 ¡Felicidades! Has completado los {datos['totales']} ciclos de estudio. ¡Tómate un merecido descanso largo! 🏖️")
+    if datos['completados'] >= datos['totales']:
+        await context.bot.send_message(chat_id=job.chat_id, text=f"🎉 ¡Felicidades! Has completado los {datos['totales']} ciclos de estudio. ¡Tómate un merecido descanso largo! 🏖️")
+        return  # <--- ESTE RETURN ES VITAL PARA QUE NO SIGA LA RUEDA
 
     await context.bot.send_message(chat_id=job.chat_id, text=f"⏰ ¡Descanso terminado! Hora de volver a estudiar para el ciclo {datos['completados'] + 1}. ¡Tú puedes lograrlo!")
-    context.job_queue.run_once(alarma_estudio, 25*60, chat_id=job.chat_id, data=datos)
+    context.job_queue.run_once(alarma_estudio, 25 * 60, chat_id=job.chat_id, data=datos)
 
 async def proceso_manual(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     texto_usuario = update.message.text
@@ -72,7 +77,7 @@ async def proceso_manual(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     minutos_pedidos = int(texto_usuario)
     pomodoro_totales = minutos_pedidos // 30
 
-    if pomodoro_totales == 1:
+    if pomodoro_totales < 1:
         pomodoro_totales = 1 
 
     mis_datos = {'totales': pomodoro_totales, 'completados': 0}
